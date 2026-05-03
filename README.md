@@ -1,117 +1,154 @@
-# Hindi-OCR-Fine-Tuning-Pipeline-GOT-OCR-2.0
+# Hindi OCR Model Training and Inference
 
-This repository contains code for training and inferring a Hindi Optical Character Recognition (OCR) model using the GOT-OCR2.0 model. It leverages Kaggle's environment for GPU processing and works with Hindi synthetic line image-text pairs for model training.
+This repository contains code for training and inferring a Hindi Optical Character Recognition (OCR) model using the `GOT-OCR2.0` model. It leverages Kaggle's environment for GPU processing and works with Hindi synthetic line image-text pairs for model training.
 
-Table of Contents
-Installation
-Dataset Structure
-Training
-Inference
-Checkpoint Management
-Sample Data Format
-Installation
-Clone the ms-swift repository and navigate to its directory:
+## Table of Contents
 
-!git clone https://github.com/modelscope/ms-swift.git
-%cd ms-swift
-Install the dependencies required for LLM training:
+- [Installation](#installation)
+- [Dataset Structure](#dataset-structure)
+- [Training](#training)
+- [Inference](#inference)
+- [Checkpoint Management](#checkpoint-management)
+- [Sample Data Format](#sample-data-format)
 
-!pip install -e .[llm]
-Install additional libraries like verovio for music score processing (if needed):
 
-!pip install verovio
-Dataset Structure
+## Installation
+
+1. Clone the `ms-swift` repository and navigate to its directory:
+
+    ```bash
+    !git clone https://github.com/modelscope/ms-swift.git
+    %cd ms-swift
+    ```
+
+2. Install the dependencies required for LLM training:
+
+    ```bash
+    !pip install -e .[llm]
+    ```
+
+3. Install additional libraries like `verovio` for music score processing (if needed):
+
+    ```bash
+    !pip install verovio
+    ```
+
+## Dataset Structure
+
 The dataset used for this project includes images and corresponding transcriptions stored in a CSV file. The structure is as follows:
 
-image_base_path: Directory containing the synthetic Hindi OCR line images.
-CSV file: Contains image filenames and their respective text transcriptions.
+- `image_base_path`: Directory containing the synthetic Hindi OCR line images.
+- `CSV file`: Contains image filenames and their respective text transcriptions.
+
 Example of a row in the CSV:
 
-image_file	text
-image_01.png	यह एक उदाहरण है
-Training
+| image_file  | text          |
+|-------------|---------------|
+| image_01.png | यह एक उदाहरण है |
+
+## Training
+
 To train the OCR model, follow these steps:
 
-Prepare the dataset by converting it to JSON format compatible with the GOT-OCR2.0 model:
+1. Prepare the dataset by converting it to JSON format compatible with the `GOT-OCR2.0` model:
 
-import os
-import json
+    ```python
+    import os
+    import json
 
-image_base_path = '/kaggle/input/hindi-ocr-synthetic-line-image-text-pair/data_80k/output_images/'
-json_data = []
+    image_base_path = '/kaggle/input/hindi-ocr-synthetic-line-image-text-pair/data_80k/output_images/'
+    json_data = []
 
-for index, row in df.iterrows():
-    full_image_path = os.path.join(image_base_path, row['image_file'])
-    json_obj = {
-        "query": "<image>Transcribe the text in this image",
-        "response": row['text'],
-        "images": [full_image_path]
-    }
-    json_data.append(json_obj)
+    for index, row in df.iterrows():
+        full_image_path = os.path.join(image_base_path, row['image_file'])
+        json_obj = {
+            "query": "<image>Transcribe the text in this image",
+            "response": row['text'],
+            "images": [full_image_path]
+        }
+        json_data.append(json_obj)
 
-json_output = json.dumps(json_data, indent=4, ensure_ascii=False)
-with open('/kaggle/working/output_data.json', 'w', encoding='utf-8') as f:
-    f.write(json_output)
-Begin the training process using the following command:
+    json_output = json.dumps(json_data, indent=4, ensure_ascii=False)
+    with open('/kaggle/working/output_data.json', 'w', encoding='utf-8') as f:
+        f.write(json_output)
+    ```
 
-!swift sft \
---model_type got-ocr2 \
---model_id_or_path stepfun-ai/GOT-OCR2_0 \
---sft_type lora \
---dataset /kaggle/working/output_data.json \
---output_dir /kaggle/working/hindi_got_model_3 \
---num_train_epochs 1 \
---max_steps 4000 \
---per_device_train_batch_size 1 \
---gradient_accumulation_steps 4 \
---learning_rate 2e-5 \
---lora_rank 8 \
---lora_alpha 32 \
---lora_dropout 0.05 \
---evaluation_strategy steps \
---eval_steps 500 \
---save_strategy steps \
---save_steps 500
-The training checkpoint will be saved in the specified output_dir.
+2. Begin the training process using the following command:
 
-Inference
-Create a JSON file for testing, containing a subset of images for inference:
+    ```bash
+    !swift sft \
+    --model_type got-ocr2 \
+    --model_id_or_path stepfun-ai/GOT-OCR2_0 \
+    --sft_type lora \
+    --dataset /kaggle/working/output_data.json \
+    --output_dir /kaggle/working/hindi_got_model_3 \
+    --num_train_epochs 1 \
+    --max_steps 4000 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 4 \
+    --learning_rate 2e-5 \
+    --lora_rank 8 \
+    --lora_alpha 32 \
+    --lora_dropout 0.05 \
+    --evaluation_strategy steps \
+    --eval_steps 500 \
+    --save_strategy steps \
+    --save_steps 500
+    ```
 
-import os
-import json
+3. The training checkpoint will be saved in the specified `output_dir`.
 
-image_base_path = '/kaggle/input/hindi-ocr-synthetic-line-image-text-pair/data_80k/TestSamples/'
-json_data = []
+## Inference
 
-for index, row in df.iterrows():
-    if index >= 10:  # Process only 10 test files
-        break
-    full_image_path = os.path.join(image_base_path, row['image_file'])
-    json_obj = {
-        "query": "<image>Transcribe the text in this image",
-        "response": row['text'],
-        "images": [full_image_path]
-    }
-    json_data.append(json_obj)
+1. Create a JSON file for testing, containing a subset of images for inference:
 
-json_output = json.dumps(json_data, indent=4, ensure_ascii=False)
-with open('/kaggle/working/test1.json', 'w', encoding='utf-8') as f:
-    f.write(json_output)
-Run inference using the trained checkpoint:
+    ```python
+    import os
+    import json
 
-!CUDA_VISIBLE_DEVICES=0 swift infer\
---ckpt_dir /kaggle/working/hindi_got_model_3/got-ocr2/v0-20240930-060444/checkpoint-4000 \
---dataset /kaggle/working/test1.json \
---load_dataset_config true
-Checkpoint Management
-After training, compress the checkpoint for easy downloading or transfer:
+    image_base_path = '/kaggle/input/hindi-ocr-synthetic-line-image-text-pair/data_80k/TestSamples/'
+    json_data = []
 
-!zip -r /kaggle/working/checkpoint-1000.zip /kaggle/working/hindi_got_model_3/got-ocr2/v0-20240930-060444/checkpoint-4000
-The zip file will be created in the /kaggle/working/ directory.
+    for index, row in df.iterrows():
+        if index >= 10:  # Process only 10 test files
+            break
+        full_image_path = os.path.join(image_base_path, row['image_file'])
+        json_obj = {
+            "query": "<image>Transcribe the text in this image",
+            "response": row['text'],
+            "images": [full_image_path]
+        }
+        json_data.append(json_obj)
 
-Sample Data Format
+    json_output = json.dumps(json_data, indent=4, ensure_ascii=False)
+    with open('/kaggle/working/test1.json', 'w', encoding='utf-8') as f:
+        f.write(json_output)
+    ```
+
+2. Run inference using the trained checkpoint:
+
+    ```bash
+    !CUDA_VISIBLE_DEVICES=0 swift infer\
+    --ckpt_dir /kaggle/working/hindi_got_model_3/got-ocr2/v0-20240930-060444/checkpoint-4000 \
+    --dataset /kaggle/working/test1.json \
+    --load_dataset_config true
+    ```
+
+## Checkpoint Management
+
+1. After training, compress the checkpoint for easy downloading or transfer:
+
+    ```bash
+    !zip -r /kaggle/working/checkpoint-1000.zip /kaggle/working/hindi_got_model_3/got-ocr2/v0-20240930-060444/checkpoint-4000
+    ```
+
+The zip file will be created in the `/kaggle/working/` directory.
+
+## Sample Data Format
+
 The dataset follows the format below for storing images and transcriptions. Here is an example structure:
 
+```json
 [
     {
         "query": "<image>Transcribe the text in this image",
