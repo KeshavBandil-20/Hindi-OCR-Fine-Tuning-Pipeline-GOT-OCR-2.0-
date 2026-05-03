@@ -1,6 +1,6 @@
 # Hindi OCR Model Training and Inference
 
-This repository contains code for training and inferring a Hindi Optical Character Recognition (OCR) model using the `GOT-OCR2.0` model. It leverages Kaggle's environment for GPU processing and works with Hindi synthetic line image-text pairs for model training.
+This repository contains code for training and inferring a Hindi Optical Character Recognition (OCR) model using the `GOT-OCR 2.0 model. It leverages Kaggle's environment for GPU processing and works with Hindi synthetic line image-text pairs for model training
 
 ## Table of Contents
 
